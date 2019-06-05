@@ -1,0 +1,18 @@
+<launch>
+  <include file="$(find turtlebot3_gazebo)/launch/turtlebot3_world.launch">
+    <arg name="world_name" value="$(find land_explorer)/worlds/my_world2.world"/>
+    <arg name="x_pos" value="0.0"/>
+    <arg name="y_pos" value="0.0"/>
+    <arg name="z_pos" value="0.0"/>
+    <arg name="model" value="waffle"/>
+  </include>
+
+  <include file="$(find turtlebot3_slam)/launch/turtlebot3_slam.launch">
+    <arg name="slam_methods" value="cartographer"/>
+    <arg name="model" value="waffle"/>
+  </include>
+
+  <node pkg="land_explorer" type="mapping_3d" name="mapping_3d"/>
+
+  <node pkg="rosbag" type="record" name="record" args="-O subset /points2 /flat_imu /odom"/>
+</launch>

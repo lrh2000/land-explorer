@@ -1,0 +1,245 @@
+diff --git a/turtlebot3_gazebo/launch/turtlebot3_world.launch b/turtlebot3_gazebo/launch/turtlebot3_world.launch
+index a761085..ae038de 100644
+--- a/turtlebot3_gazebo/launch/turtlebot3_world.launch
++++ b/turtlebot3_gazebo/launch/turtlebot3_world.launch
+@@ -3,9 +3,10 @@
+   <arg name="x_pos" default="-2.0"/>
+   <arg name="y_pos" default="-0.5"/>
+   <arg name="z_pos" default="0.0"/>
++  <arg name="world_name" default="$(find turtlebot3_gazebo)/worlds/turtlebot3_world.world"/>
+ 
+   <include file="$(find gazebo_ros)/launch/empty_world.launch">
+-    <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/turtlebot3_world.world"/>
++    <arg name="world_name" value="$(arg world_name)"/>
+     <arg name="paused" value="false"/>
+     <arg name="use_sim_time" value="true"/>
+     <arg name="gui" value="true"/>
+diff --git a/turtlebot3_gazebo/models/turtlebot3_world/model.sdf b/turtlebot3_gazebo/models/turtlebot3_world/model.sdf
+index d733d00..9959bb7 100644
+--- a/turtlebot3_gazebo/models/turtlebot3_world/model.sdf
++++ b/turtlebot3_gazebo/models/turtlebot3_world/model.sdf
+@@ -8,7 +8,7 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.9</length>
+             </cylinder>
+           </geometry>
+           <max_contacts>10</max_contacts>
+@@ -28,13 +28,13 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.9</length>
+             </cylinder>
+           </geometry>
+           <material>
+             <script>
+               <uri>file://media/materials/scripts/gazebo.material</uri>
+-              <name>Gazebo/White</name>
++              <name>Gazebo/Red</name>
+             </script>
+           </material>
+         </visual>
+@@ -44,7 +44,7 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.6</length>
+             </cylinder>
+           </geometry>
+           <max_contacts>10</max_contacts>
+@@ -64,13 +64,13 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.6</length>
+             </cylinder>
+           </geometry>
+           <material>
+             <script>
+               <uri>file://media/materials/scripts/gazebo.material</uri>
+-              <name>Gazebo/White</name>
++              <name>Gazebo/Blue</name>
+             </script>
+           </material>
+         </visual>
+@@ -80,7 +80,7 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.3</length>
+             </cylinder>
+           </geometry>
+           <max_contacts>10</max_contacts>
+@@ -100,13 +100,13 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.3</length>
+             </cylinder>
+           </geometry>
+           <material>
+             <script>
+               <uri>file://media/materials/scripts/gazebo.material</uri>
+-              <name>Gazebo/White</name>
++              <name>Gazebo/Yellow</name>
+             </script>
+           </material>
+         </visual>
+@@ -116,7 +116,7 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.6</length>
+             </cylinder>
+           </geometry>
+           <max_contacts>10</max_contacts>
+@@ -136,13 +136,13 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.6</length>
+             </cylinder>
+           </geometry>
+           <material>
+             <script>
+               <uri>file://media/materials/scripts/gazebo.material</uri>
+-              <name>Gazebo/White</name>
++              <name>Gazebo/Blue</name>
+             </script>
+           </material>
+         </visual>
+@@ -152,7 +152,7 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.9</length>
+             </cylinder>
+           </geometry>
+           <max_contacts>10</max_contacts>
+@@ -172,13 +172,13 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.9</length>
+             </cylinder>
+           </geometry>
+           <material>
+             <script>
+               <uri>file://media/materials/scripts/gazebo.material</uri>
+-              <name>Gazebo/White</name>
++              <name>Gazebo/Yellow</name>
+             </script>
+           </material>
+         </visual>
+@@ -188,7 +188,7 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.6</length>
+             </cylinder>
+           </geometry>
+           <max_contacts>10</max_contacts>
+@@ -208,13 +208,13 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.6</length>
+             </cylinder>
+           </geometry>
+           <material>
+             <script>
+               <uri>file://media/materials/scripts/gazebo.material</uri>
+-              <name>Gazebo/White</name>
++              <name>Gazebo/Red</name>
+             </script>
+           </material>
+         </visual>
+@@ -224,7 +224,7 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.3</length>
+             </cylinder>
+           </geometry>
+           <max_contacts>10</max_contacts>
+@@ -244,13 +244,13 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.3</length>
+             </cylinder>
+           </geometry>
+           <material>
+             <script>
+               <uri>file://media/materials/scripts/gazebo.material</uri>
+-              <name>Gazebo/White</name>
++              <name>Gazebo/Yellow</name>
+             </script>
+           </material>
+         </visual>
+@@ -260,7 +260,7 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.6</length>
+             </cylinder>
+           </geometry>
+           <max_contacts>10</max_contacts>
+@@ -280,13 +280,13 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.6</length>
+             </cylinder>
+           </geometry>
+           <material>
+             <script>
+               <uri>file://media/materials/scripts/gazebo.material</uri>
+-              <name>Gazebo/White</name>
++              <name>Gazebo/Red</name>
+             </script>
+           </material>
+         </visual>
+@@ -296,7 +296,7 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.9</length>
+             </cylinder>
+           </geometry>
+           <max_contacts>10</max_contacts>
+@@ -316,13 +316,13 @@
+           <geometry>
+             <cylinder>
+               <radius>0.15</radius>
+-              <length>0.5</length>
++              <length>0.9</length>
+             </cylinder>
+           </geometry>
+           <material>
+             <script>
+               <uri>file://media/materials/scripts/gazebo.material</uri>
+-              <name>Gazebo/White</name>
++              <name>Gazebo/Blue</name>
+             </script>
+           </material>
+         </visual>

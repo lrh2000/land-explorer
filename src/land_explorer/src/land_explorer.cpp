@@ -1,10 +1,42 @@
 #include <cstring>
 #include <queue>
+#include <ros/init.h>
 #include <ros/topic.h>
+#include <ros/node_handle.h>
 #include <geometry_msgs/PointStamped.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include "land_explorer/node.h"
+#include <tf2_ros/transform_listener.h>
+#include <actionlib/client/simple_action_client.h>
+#include <move_base_msgs/MoveBaseAction.h>
+
+class LandExplorer :public ros::NodeHandle
+{
+public:
+  LandExplorer(void);
+  int exec(void);
+
+private:
+  bool calcMovingTarget(std::pair<double, double> &pos, const std::string &frame_id);
+  void moveTo(const std::pair<double, double> &pos, const std::string &frame_id);
+
+private:
+  actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> move_base_;
+  std::string map_topic_;
+  std::string map_frame_;
+  std::string base_link_frame_;
+
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
+
+  double map_free_thresh_;
+  double map_occupied_thresh_;
+
+  double laser_max_dis_;
+  double robot_width_;
+
+  friend class OccupancyGridHelper;
+};
 
 class OccupancyGridHelper
 {
@@ -20,7 +52,8 @@ public:
                                                const std::string &target_frame);
 
   int countUnstableCells(void);
-  void getUnknownsMax(int &max_val, std::pair<int, int> &max_pos);
+  void getUnknownsMax(int &max_val, std::pair<int, int> &max_pos,
+                                  const std::pair<int, int> &origin);
 
 private:
   template<typename T1, typename T2>
@@ -32,7 +65,7 @@ private:
   void calcFree(const std::pair<int, int> &origin);
   void calcPassable(void);
   void calcReachable(const std::pair<int, int> &origin);
-  void calcUnknowns(void);
+  int calcUnknowns(int x, int y);
 
   bool *calcVisible(bool *source,
       const std::pair<int, int> &pos, int half_width);
@@ -91,21 +124,37 @@ inline int OccupancyGridHelper::countUnstableCells(void)
   return unstable_cells_;
 }
 
-void OccupancyGridHelper::getUnknownsMax(int &max_val, std::pair<int, int> &max_pos)
+void OccupancyGridHelper::getUnknownsMax(int &max_val, std::pair<int, int> &max_pos,
+                                                    const std::pair<int, int> &origin)
 {
+  static const int fx[4][2]={{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+
   int step = node_->robot_width_ / map_->info.resolution;
+  int px = origin.first / step * step, py = origin.second / step * step;
 
   max_val = -1;
-  for (int x = 0;x < map_->info.width;x += step)
+  for (int len = step;len < map_->info.width + map_->info.height;len += step)
   {
-    for (int y = 0;y < map_->info.height;y += step)
+    if (len >= 5*step && max_val > 6)
+      return;
+
+    for (int x = 0;x < map_->info.width && x <= len;x += step)
     {
-      int val = getValue(unknowns_, x, y, -1);
-      if (val <= max_val)
-        continue;
-      max_val = val;
-      max_pos.first = x;
-      max_pos.second = y;
+      int y = len - x;
+      for (int i = 0;i < 4;i++)
+      {
+          int xx = px + x * fx[i][0], yy = py + y * fx[i][1];
+          if (xx < 0 || yy < 0)
+            continue;
+          if (xx >= map_->info.width || yy >= map_->info.height)
+            continue;
+          int val = calcUnknowns(xx, yy);
+          if (val <= max_val)
+            continue;
+          max_val = val;
+          max_pos.first = xx;
+          max_pos.second = yy;
+      }
     }
   }
 }
@@ -116,7 +165,6 @@ void OccupancyGridHelper::initMap(const std::pair<int, int> &origin)
   calcFree(origin);
   calcPassable();
   calcReachable(origin);
-  calcUnknowns();
 }
 
 void OccupancyGridHelper::calcOccupied(void)
@@ -217,40 +265,35 @@ void OccupancyGridHelper::calcReachable(const std::pair<int, int> &origin)
   }
 }
 
-void OccupancyGridHelper::calcUnknowns(void)
+int OccupancyGridHelper::calcUnknowns(int x, int y)
 {
   int laser_range = node_->laser_max_dis_ / map_->info.resolution;
   int half_width = laser_range / sqrt(2);
   int width = half_width * 2 + 1;
   int free_thresh = node_->map_free_thresh_ * 100;
   int occupied_thresh = node_->map_occupied_thresh_ * 100;
-  int step = node_->robot_width_ / map_->info.resolution;
 
-  for (int x = 0;x < map_->info.width;x += step)
+  int &unknown = unknowns_[x + y * map_->info.width];
+  unknown = -1;
+  if (!getValue(is_reachable_, x, y, false))
+    return unknown;
+
+  bool *visible = calcVisible(is_occupied_, std::make_pair(x, y), half_width);
+  unknown = 0;
+  for (int i = 0;i < width;++i)
   {
-    for (int y = 0;y < map_->info.height;y += step)
+    for (int j = 0;j < width;++j)
     {
-      int &unknown = unknowns_[x + y * map_->info.width];
-      unknown = -1;
-      if (!getValue(is_reachable_, x, y, false))
+      if (!visible[i + j * width])
         continue;
-
-      bool *visible = calcVisible(is_occupied_, std::make_pair(x, y), half_width);
-      unknown = 0;
-      for (int i = 0;i < width;++i)
-      {
-        for (int j = 0;j < width;++j)
-        {
-          if (!visible[i + j * width])
-            continue;
-          int prob = getValue(map_->data, x + (i - half_width), y + (j - half_width), -1);
-          if (prob < 0 || (prob > free_thresh && prob < occupied_thresh))
-            ++unknown;
-        }
-      }
-      delete[] visible;
+      int prob = getValue(map_->data, x + (i - half_width), y + (j - half_width), -1);
+      if (prob < 0 || (prob > free_thresh && prob < occupied_thresh))
+        ++unknown;
     }
   }
+  delete[] visible;
+
+  return unknown;
 }
 
 bool *OccupancyGridHelper::calcVisible(bool *source,
@@ -364,9 +407,9 @@ int LandExplorer::exec(void)
     ROS_INFO("ID: %d", id++);
 
     std::pair<double, double> pos;
-    if (!calcMovingTarget(pos, base_link_frame_))
+    if (!calcMovingTarget(pos, map_frame_))
       break;
-    moveTo(pos, base_link_frame_);
+    moveTo(pos, map_frame_);
   }
 
   return 0;
@@ -385,7 +428,7 @@ bool LandExplorer::calcMovingTarget(std::pair<double, double> &pos, const std::s
 
   int gain;
   std::pair<int, int> pos1;
-  map.getUnknownsMax(gain, pos1);
+  map.getUnknownsMax(gain, pos1, map.convertToCellPos(std::make_pair(0.0, 0.0), base_link_frame_));
   if (gain < 5) {
     ROS_INFO("The current map is good enough! No need to move.\n");
     ROS_INFO("Exiting...");
@@ -421,4 +464,12 @@ void LandExplorer::moveTo(const std::pair<double, double> &pos, const std::strin
     move_base_.cancelGoal();
     move_base_.waitForResult();
   }
+}
+
+int main(int argc, char **argv)
+{
+  ros::init(argc, argv, "land_explorer");
+
+  LandExplorer node;
+  return node.exec();
 }

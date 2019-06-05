@@ -1,0 +1,174 @@
+diff --git a/cartographer_ros/cartographer_ros/assets_writer.cc b/cartographer_ros/cartographer_ros/assets_writer.cc
+index 1ca3e09..41105ea 100644
+--- a/cartographer_ros/cartographer_ros/assets_writer.cc
++++ b/cartographer_ros/cartographer_ros/assets_writer.cc
+@@ -101,10 +101,11 @@ std::unique_ptr<carto::io::PointsBatch> HandleMessage(
+   points_batch->start_time = start_time;
+   points_batch->frame_id = message.header.frame_id;
+ 
++  std::vector<carto::io::FloatColor> colors;
+   carto::sensor::PointCloudWithIntensities point_cloud;
+   carto::common::Time point_cloud_time;
+   std::tie(point_cloud, point_cloud_time) =
+-      ToPointCloudWithIntensities(message);
++      ToPointCloudWithIntensities(message, &colors);
+   CHECK_EQ(point_cloud.intensities.size(), point_cloud.points.size());
+ 
+   for (size_t i = 0; i < point_cloud.points.size(); ++i) {
+@@ -125,6 +126,7 @@ std::unique_ptr<carto::io::PointsBatch> HandleMessage(
+         sensor_to_map *
+         carto::sensor::ToRangefinderPoint(point_cloud.points[i]));
+     points_batch->intensities.push_back(point_cloud.intensities[i]);
++    points_batch->colors.push_back(colors[i]);
+     // We use the last transform for the origin, which is approximately correct.
+     points_batch->origin = sensor_to_map * Eigen::Vector3f::Zero();
+   }
+diff --git a/cartographer_ros/cartographer_ros/msg_conversion.cc b/cartographer_ros/cartographer_ros/msg_conversion.cc
+index 7e19088..2f09d2e 100644
+--- a/cartographer_ros/cartographer_ros/msg_conversion.cc
++++ b/cartographer_ros/cartographer_ros/msg_conversion.cc
+@@ -202,23 +202,39 @@ sensor_msgs::PointCloud2 ToPointCloud2Message(
+ 
+ std::tuple<::cartographer::sensor::PointCloudWithIntensities,
+            ::cartographer::common::Time>
+-ToPointCloudWithIntensities(const sensor_msgs::LaserScan& msg) {
++ToPointCloudWithIntensities(const sensor_msgs::LaserScan& msg,
++                            std::vector<::cartographer::io::FloatColor> *) {
+   return LaserScanToPointCloudWithIntensities(msg);
+ }
+ 
+ std::tuple<::cartographer::sensor::PointCloudWithIntensities,
+            ::cartographer::common::Time>
+-ToPointCloudWithIntensities(const sensor_msgs::MultiEchoLaserScan& msg) {
++ToPointCloudWithIntensities(const sensor_msgs::MultiEchoLaserScan& msg,
++                            std::vector<::cartographer::io::FloatColor> *) {
+   return LaserScanToPointCloudWithIntensities(msg);
+ }
+ 
+ std::tuple<::cartographer::sensor::PointCloudWithIntensities,
+            ::cartographer::common::Time>
+-ToPointCloudWithIntensities(const sensor_msgs::PointCloud2& msg) {
++ToPointCloudWithIntensities(const sensor_msgs::PointCloud2& msg,
++                            std::vector<::cartographer::io::FloatColor> *colors) {
+   PointCloudWithIntensities point_cloud;
+   // We check for intensity field here to avoid run-time warnings if we pass in
+   // a PointCloud2 without intensity.
+-  if (PointCloud2HasField(msg, "intensity")) {
++  if (PointCloud2HasField(msg, "rgb") && colors) {
++    pcl::PointCloud<pcl::PointXYZRGB> pcl_point_cloud;
++    pcl::fromROSMsg(msg, pcl_point_cloud);
++    colors->clear();
++    colors->reserve(pcl_point_cloud.size());
++    point_cloud.points.reserve(pcl_point_cloud.size());
++    point_cloud.intensities.reserve(pcl_point_cloud.size());
++    for (const auto& point : pcl_point_cloud) {
++      point_cloud.points.push_back(
++          {Eigen::Vector3f{point.x, point.y, point.z}, 0.f});
++      point_cloud.intensities.push_back(1.0f);
++      colors->push_back(::cartographer::io::ToFloatColor(::cartographer::io::Uint8Color{{point.r, point.g, point.b}}));
++    }
++  } else if (PointCloud2HasField(msg, "intensity")) {
+     if (PointCloud2HasField(msg, "time")) {
+       pcl::PointCloud<PointXYZIT> pcl_point_cloud;
+       pcl::fromROSMsg(msg, pcl_point_cloud);
+diff --git a/cartographer_ros/cartographer_ros/msg_conversion.h b/cartographer_ros/cartographer_ros/msg_conversion.h
+index ab3fa1e..afd0125 100644
+--- a/cartographer_ros/cartographer_ros/msg_conversion.h
++++ b/cartographer_ros/cartographer_ros/msg_conversion.h
+@@ -51,15 +51,18 @@ geometry_msgs::Point ToGeometryMsgPoint(const Eigen::Vector3d& vector3d);
+ // the fourth component of each point relative to `Time`.
+ std::tuple<::cartographer::sensor::PointCloudWithIntensities,
+            ::cartographer::common::Time>
+-ToPointCloudWithIntensities(const sensor_msgs::LaserScan& msg);
++ToPointCloudWithIntensities(const sensor_msgs::LaserScan& msg,
++                            std::vector<::cartographer::io::FloatColor> *colors = nullptr);
+ 
+ std::tuple<::cartographer::sensor::PointCloudWithIntensities,
+            ::cartographer::common::Time>
+-ToPointCloudWithIntensities(const sensor_msgs::MultiEchoLaserScan& msg);
++ToPointCloudWithIntensities(const sensor_msgs::MultiEchoLaserScan& msg,
++                            std::vector<::cartographer::io::FloatColor> *colors = nullptr);
+ 
+ std::tuple<::cartographer::sensor::PointCloudWithIntensities,
+            ::cartographer::common::Time>
+-ToPointCloudWithIntensities(const sensor_msgs::PointCloud2& msg);
++ToPointCloudWithIntensities(const sensor_msgs::PointCloud2& msg,
++                            std::vector<::cartographer::io::FloatColor> *colors = nullptr);
+ 
+ ::cartographer::sensor::LandmarkData ToLandmarkData(
+     const cartographer_ros_msgs::LandmarkList& landmark_list);
+diff --git a/cartographer_ros/configuration_files/assets_writer_backpack_2d.lua b/cartographer_ros/configuration_files/assets_writer_backpack_2d.lua
+index de48eb0..1813243 100644
+--- a/cartographer_ros/configuration_files/assets_writer_backpack_2d.lua
++++ b/cartographer_ros/configuration_files/assets_writer_backpack_2d.lua
+@@ -24,15 +24,18 @@ include "transform.lua"
+ options = {
+   tracking_frame = "base_link",
+   pipeline = {
++    --[[
+     {
+       action = "min_max_range_filter",
+       min_range = 1.,
+       max_range = 60.,
+     },
++    --]]
+     {
+       action = "dump_num_points",
+     },
+ 
++    --[[
+     -- Gray X-Rays. These only use geometry to color pixels.
+     {
+       action = "write_xray_image",
+@@ -40,12 +43,14 @@ options = {
+       filename = "xray_yz_all",
+       transform = YZ_TRANSFORM,
+     },
++    --]]
+     {
+       action = "write_xray_image",
+       voxel_size = VOXEL_SIZE,
+       filename = "xray_xy_all",
+       transform = XY_TRANSFORM,
+     },
++    --[[
+     {
+       action = "write_xray_image",
+       voxel_size = VOXEL_SIZE,
+@@ -84,6 +89,7 @@ options = {
+       filename = "xray_xz_all_intensity",
+       transform = XZ_TRANSFORM,
+     },
++    --]]
+ 
+     -- We also write a PLY file at this stage, because gray points look good.
+     -- The points in the PLY can be visualized using
+@@ -93,6 +99,7 @@ options = {
+       filename = "points.ply",
+     },
+ 
++    --[[
+     -- Now we recolor our points by frame and write another batch of X-Rays. It
+     -- is visible in them what was seen by the horizontal and the vertical
+     -- laser.
+@@ -125,6 +132,7 @@ options = {
+       filename = "xray_xz_all_color",
+       transform = XZ_TRANSFORM,
+     },
++    --]]
+   }
+ }
+ 
+diff --git a/cartographer_ros/launch/assets_writer_backpack_2d.launch b/cartographer_ros/launch/assets_writer_backpack_2d.launch
+index 939b6d7..22f0059 100644
+--- a/cartographer_ros/launch/assets_writer_backpack_2d.launch
++++ b/cartographer_ros/launch/assets_writer_backpack_2d.launch
+@@ -20,7 +20,7 @@
+       type="cartographer_assets_writer" args="
+           -configuration_directory $(find cartographer_ros)/configuration_files
+           -configuration_basename $(arg config_file)
+-          -urdf_filename $(find cartographer_ros)/urdf/backpack_2d.urdf
++          -urdf_filename $(arg urdf_filename)
+           -bag_filenames $(arg bag_filenames)
+           -pose_graph_filename $(arg pose_graph_filename)"
+       output="screen">

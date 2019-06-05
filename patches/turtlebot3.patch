@@ -1,0 +1,367 @@
+diff --git a/turtlebot3_description/urdf/turtlebot3_waffle.gazebo.xacro b/turtlebot3_description/urdf/turtlebot3_waffle.gazebo.xacro
+index 3eef193..e9cf2fd 100644
+--- a/turtlebot3_description/urdf/turtlebot3_waffle.gazebo.xacro
++++ b/turtlebot3_description/urdf/turtlebot3_waffle.gazebo.xacro
+@@ -143,15 +143,15 @@
+     </sensor>
+   </gazebo>
+ 
+-  <gazebo reference="camera_rgb_frame">
++  <gazebo reference="camera1_rgb_frame">
+     <sensor type="depth" name="realsense_R200">
+       <always_on>true</always_on>
+       <visualize>$(arg camera_visual)</visualize>
+       <camera>
+           <horizontal_fov>1.3439</horizontal_fov>
+           <image>
+-              <width>1920</width>
+-              <height>1080</height>
++              <width>480</width>
++              <height>360</height>
+               <format>R8G8B8</format>
+           </image>
+           <depth_camera></depth_camera>
+@@ -160,12 +160,12 @@
+               <far>100</far>
+           </clip>
+       </camera>
+-      <plugin name="camera_controller" filename="libgazebo_ros_openni_kinect.so">
++      <plugin name="camera1_controller" filename="libgazebo_ros_openni_kinect.so">
+         <baseline>0.2</baseline>
+         <alwaysOn>true</alwaysOn>
+         <updateRate>30.0</updateRate>
+-        <cameraName>camera</cameraName>
+-        <frameName>camera_rgb_optical_frame</frameName>
++        <cameraName>camera1</cameraName>
++        <frameName>camera1_rgb_optical_frame</frameName>
+         <imageTopicName>rgb/image_raw</imageTopicName>
+         <depthImageTopicName>depth/image_raw</depthImageTopicName>
+         <pointCloudTopicName>depth/points</pointCloudTopicName>
+@@ -187,4 +187,50 @@
+     </sensor>
+   </gazebo>
+ 
++  <gazebo reference="camera2_rgb_frame">
++    <sensor type="depth" name="realsense_R200">
++      <always_on>true</always_on>
++      <visualize>$(arg camera_visual)</visualize>
++      <camera>
++          <horizontal_fov>1.3439</horizontal_fov>
++          <image>
++              <width>480</width>
++              <height>360</height>
++              <format>R8G8B8</format>
++          </image>
++          <depth_camera></depth_camera>
++          <clip>
++              <near>0.03</near>
++              <far>100</far>
++          </clip>
++      </camera>
++      <plugin name="camera2_controller" filename="libgazebo_ros_openni_kinect.so">
++        <baseline>0.2</baseline>
++        <alwaysOn>true</alwaysOn>
++        <updateRate>30.0</updateRate>
++        <cameraName>camera2</cameraName>
++        <frameName>camera2_rgb_optical_frame</frameName>
++        <imageTopicName>rgb/image_raw</imageTopicName>
++        <depthImageTopicName>depth/image_raw</depthImageTopicName>
++        <pointCloudTopicName>depth/points</pointCloudTopicName>
++        <cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
++        <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
++        <pointCloudCutoff>0.4</pointCloudCutoff>
++            <hackBaseline>0.07</hackBaseline>
++            <distortionK1>0.0</distortionK1>
++            <distortionK2>0.0</distortionK2>
++            <distortionK3>0.0</distortionK3>
++            <distortionT1>0.0</distortionT1>
++            <distortionT2>0.0</distortionT2>
++        <CxPrime>0.0</CxPrime>
++        <Cx>0.0</Cx>
++        <Cy>0.0</Cy>
++        <focalLength>0</focalLength>
++        <hackBaseline>0</hackBaseline>
++      </plugin>
++    </sensor>
++  </gazebo>
++
++
++
+ </robot>
+diff --git a/turtlebot3_description/urdf/turtlebot3_waffle.urdf.xacro b/turtlebot3_description/urdf/turtlebot3_waffle.urdf.xacro
+index ee23268..4f79681 100644
+--- a/turtlebot3_description/urdf/turtlebot3_waffle.urdf.xacro
++++ b/turtlebot3_description/urdf/turtlebot3_waffle.urdf.xacro
+@@ -190,13 +190,13 @@
+     </inertial>
+   </link>
+ 
+-  <joint name="camera_joint" type="fixed">
++  <joint name="camera1_joint" type="fixed">
+     <origin xyz="0.064 -0.065 0.094" rpy="0 0 0"/>
+     <parent link="base_link"/>
+-    <child link="camera_link"/>
++    <child link="camera1_link"/>
+   </joint>
+ 
+-  <link name="camera_link">
++  <link name="camera1_link">
+     <visual>
+      <origin xyz="0 0 0" rpy="1.57 0 1.57"/>
+       <geometry>
+@@ -220,32 +220,97 @@
+     </inertial>-->
+   </link>
+ 
+-  <joint name="camera_rgb_joint" type="fixed">
++  <joint name="camera1_rgb_joint" type="fixed">
+     <origin xyz="${r200_cam_rgb_px} ${r200_cam_rgb_py} ${r200_cam_rgb_pz}" rpy="0 0 0"/>
+-    <parent link="camera_link"/>
+-    <child link="camera_rgb_frame"/>
++    <parent link="camera1_link"/>
++    <child link="camera1_rgb_frame"/>
+   </joint>
+-  <link name="camera_rgb_frame"/>
++  <link name="camera1_rgb_frame"/>
+ 
+-  <joint name="camera_rgb_optical_joint" type="fixed">
++  <joint name="camera1_rgb_optical_joint" type="fixed">
+     <origin xyz="0 0 0" rpy="-1.57 0 -1.57"/>
+-    <parent link="camera_rgb_frame"/>
+-    <child link="camera_rgb_optical_frame"/>
++    <parent link="camera1_rgb_frame"/>
++    <child link="camera1_rgb_optical_frame"/>
+   </joint>
+-  <link name="camera_rgb_optical_frame"/>
++  <link name="camera1_rgb_optical_frame"/>
+ 
+-  <joint name="camera_depth_joint" type="fixed">
++  <joint name="camera1_depth_joint" type="fixed">
+     <origin xyz="${r200_cam_rgb_px} ${r200_cam_rgb_py + r200_cam_depth_offset} ${r200_cam_rgb_pz}" rpy="0 0 0"/>
+-    <parent link="camera_link"/>
+-    <child link="camera_depth_frame"/>
++    <parent link="camera1_link"/>
++    <child link="camera1_depth_frame"/>
+   </joint>
+-  <link name="camera_depth_frame"/>
++  <link name="camera1_depth_frame"/>
+ 
+-  <joint name="camera_depth_optical_joint" type="fixed">
++  <joint name="camera1_depth_optical_joint" type="fixed">
+     <origin xyz="0 0 0" rpy="-1.57 0 -1.57"/>
+-    <parent link="camera_depth_frame"/>
+-    <child link="camera_depth_optical_frame"/>
++    <parent link="camera1_depth_frame"/>
++    <child link="camera1_depth_optical_frame"/>
+   </joint>
+-  <link name="camera_depth_optical_frame"/>
++  <link name="camera1_depth_optical_frame"/>
++
++  <joint name="backward_joint" type="fixed">
++    <origin xyz="-0.15 0 0" rpy="0 0 3.14"/>
++    <parent link="base_link"/>
++    <child link="backward_link"/>
++  </joint>
++  <link name="backward_link"/>
++
++  <joint name="camera2_joint" type="fixed">
++    <origin xyz="0.064 -0.065 0.094" rpy="0 0 0"/>
++    <parent link="backward_link"/>
++    <child link="camera2_link"/>
++  </joint>
++
++  <link name="camera2_link">
++    <visual>
++     <origin xyz="0 0 0" rpy="1.57 0 1.57"/>
++      <geometry>
++       <mesh filename="package://turtlebot3_description/meshes/sensors/r200.dae" />
++      </geometry>
++    </visual>
++    <collision>
++      <origin xyz="0.003 0.065 0.007" rpy="0 0 0"/>
++      <geometry>
++        <box size="0.012 0.132 0.020"/>
++      </geometry>
++    </collision>
++
++    <!-- This inertial field needs doesn't contain reliable data!! -->
++<!--   <inertial>
++      <mass value="0.564" />
++      <origin xyz="0 0 0" />
++      <inertia ixx="0.003881243" ixy="0.0" ixz="0.0"
++               iyy="0.000498940" iyz="0.0"
++               izz="0.003879257" />
++    </inertial>-->
++  </link>
++
++  <joint name="camera2_rgb_joint" type="fixed">
++    <origin xyz="${r200_cam_rgb_px} ${r200_cam_rgb_py} ${r200_cam_rgb_pz}" rpy="0 0 0"/>
++    <parent link="camera2_link"/>
++    <child link="camera2_rgb_frame"/>
++  </joint>
++  <link name="camera2_rgb_frame"/>
++
++  <joint name="camera2_rgb_optical_joint" type="fixed">
++    <origin xyz="0 0 0" rpy="-1.57 0 -1.57"/>
++    <parent link="camera2_rgb_frame"/>
++    <child link="camera2_rgb_optical_frame"/>
++  </joint>
++  <link name="camera2_rgb_optical_frame"/>
++
++  <joint name="camera2_depth_joint" type="fixed">
++    <origin xyz="${r200_cam_rgb_px} ${r200_cam_rgb_py + r200_cam_depth_offset} ${r200_cam_rgb_pz}" rpy="0 0 0"/>
++    <parent link="camera2_link"/>
++    <child link="camera2_depth_frame"/>
++  </joint>
++  <link name="camera2_depth_frame"/>
++
++  <joint name="camera2_depth_optical_joint" type="fixed">
++    <origin xyz="0 0 0" rpy="-1.57 0 -1.57"/>
++    <parent link="camera2_depth_frame"/>
++    <child link="camera2_depth_optical_frame"/>
++  </joint>
++  <link name="camera2_depth_optical_frame"/>
+ 
+ </robot>
+diff --git a/turtlebot3_navigation/param/costmap_common_params_waffle.yaml b/turtlebot3_navigation/param/costmap_common_params_waffle.yaml
+index 3d5a6d7..1759ab5 100644
+--- a/turtlebot3_navigation/param/costmap_common_params_waffle.yaml
++++ b/turtlebot3_navigation/param/costmap_common_params_waffle.yaml
+@@ -4,9 +4,9 @@ raytrace_range: 3.5
+ footprint: [[-0.205, -0.155], [-0.205, 0.155], [0.077, 0.155], [0.077, -0.155]]
+ #robot_radius: 0.17
+ 
+-inflation_radius: 1.0
++inflation_radius: 0.3
+ cost_scaling_factor: 3.0
+ 
+ map_type: costmap
+-observation_sources: scan
+-scan: {sensor_frame: base_scan, data_type: LaserScan, topic: scan, marking: true, clearing: true}
++#observation_sources: scan
++#scan: {sensor_frame: base_scan, data_type: LaserScan, topic: scan, marking: true, clearing: true}
+diff --git a/turtlebot3_navigation/param/dwa_local_planner_params_waffle.yaml b/turtlebot3_navigation/param/dwa_local_planner_params_waffle.yaml
+index 559e9bf..611b712 100644
+--- a/turtlebot3_navigation/param/dwa_local_planner_params_waffle.yaml
++++ b/turtlebot3_navigation/param/dwa_local_planner_params_waffle.yaml
+@@ -8,11 +8,11 @@ DWAPlannerROS:
+   min_vel_y: 0.0
+ 
+ # The velocity when robot is moving in a straight line
+-  max_trans_vel:  0.26
+-  min_trans_vel:  0.13
++  max_vel_trans:  0.26
++  min_vel_trans:  0.13
+ 
+-  max_rot_vel: 1.82
+-  min_rot_vel: 0.9
++  max_vel_theta: 1.82
++  min_vel_theta: 0.9
+ 
+   acc_lim_x: 2.5
+   acc_lim_y: 0.0
+@@ -20,7 +20,7 @@ DWAPlannerROS:
+ 
+ # Goal Tolerance Parametes
+   xy_goal_tolerance: 0.05
+-  yaw_goal_tolerance: 0.17
++  yaw_goal_tolerance: 3.14
+   latch_xy_goal_tolerance: false
+ 
+ # Forward Simulation Parameters
+@@ -28,7 +28,7 @@ DWAPlannerROS:
+   vx_samples: 20
+   vy_samples: 0
+   vth_samples: 40
+-  controller_frequency: 10.0
++  controller_frequency: 5.0
+ 
+ # Trajectory Scoring Parameters
+   path_distance_bias: 32.0
+diff --git a/turtlebot3_navigation/param/global_costmap_params.yaml b/turtlebot3_navigation/param/global_costmap_params.yaml
+index bf475f5..6895e4f 100644
+--- a/turtlebot3_navigation/param/global_costmap_params.yaml
++++ b/turtlebot3_navigation/param/global_costmap_params.yaml
+@@ -2,9 +2,11 @@ global_costmap:
+   global_frame: map
+   robot_base_frame: base_footprint
+ 
+-  update_frequency: 10.0
+-  publish_frequency: 10.0
++  update_frequency: 5.0
++  publish_frequency: 5.0
+   transform_tolerance: 0.5
+ 
+   static_map: true
++
++  lethal_cost_threshold: 51
+  
+diff --git a/turtlebot3_navigation/param/local_costmap_params.yaml b/turtlebot3_navigation/param/local_costmap_params.yaml
+index 98c1845..6a024d7 100644
+--- a/turtlebot3_navigation/param/local_costmap_params.yaml
++++ b/turtlebot3_navigation/param/local_costmap_params.yaml
+@@ -2,8 +2,8 @@ local_costmap:
+   global_frame: odom
+   robot_base_frame: base_footprint
+ 
+-  update_frequency: 10.0
+-  publish_frequency: 10.0
++  update_frequency: 5.0
++  publish_frequency: 5.0
+   transform_tolerance: 0.5  
+ 
+   static_map: false  
+@@ -12,3 +12,5 @@ local_costmap:
+   height: 3
+   resolution: 0.05
+   
++  observation_sources: scan
++  scan: {sensor_frame: base_scan, data_type: LaserScan, topic: scan, marking: true, clearing: true}
+diff --git a/turtlebot3_navigation/param/move_base_params.yaml b/turtlebot3_navigation/param/move_base_params.yaml
+index f042cd6..1dc4098 100644
+--- a/turtlebot3_navigation/param/move_base_params.yaml
++++ b/turtlebot3_navigation/param/move_base_params.yaml
+@@ -1,5 +1,5 @@
+ shutdown_costmaps: false
+-controller_frequency: 10.0
++controller_frequency: 5.0
+ planner_patience: 5.0
+ controller_patience: 15.0
+ conservative_reset_dist: 3.0
+diff --git a/turtlebot3_slam/config/turtlebot3_lds_2d.lua b/turtlebot3_slam/config/turtlebot3_lds_2d.lua
+index 954a51c..b3a4e73 100644
+--- a/turtlebot3_slam/config/turtlebot3_lds_2d.lua
++++ b/turtlebot3_slam/config/turtlebot3_lds_2d.lua
+@@ -19,7 +19,7 @@ options = {
+   map_builder = MAP_BUILDER,
+   trajectory_builder = TRAJECTORY_BUILDER,
+   map_frame = "map",
+-  tracking_frame = "imu_link", -- imu_link, If you are using gazebo, use 'base_footprint' (libgazebo_ros_imu's bug)
++  tracking_frame = "base_footprint", -- imu_link, If you are using gazebo, use 'base_footprint' (libgazebo_ros_imu's bug)
+   published_frame = "odom",
+   odom_frame = "odom",
+   provide_odom_frame = false,
+@@ -51,7 +51,7 @@ TRAJECTORY_BUILDER_2D.use_imu_data = true
+ TRAJECTORY_BUILDER_2D.use_online_correlative_scan_matching = true
+ TRAJECTORY_BUILDER_2D.motion_filter.max_angle_radians = math.rad(0.1)
+ 
+-POSE_GRAPH.constraint_builder.min_score = 0.65
+-POSE_GRAPH.constraint_builder.global_localization_min_score = 0.7
++POSE_GRAPH.constraint_builder.min_score = 0.8
++POSE_GRAPH.constraint_builder.global_localization_min_score = 0.85
+ 
+ return options
+diff --git a/turtlebot3_slam/launch/turtlebot3_cartographer.launch b/turtlebot3_slam/launch/turtlebot3_cartographer.launch
+index d72f444..8b536f5 100644
+--- a/turtlebot3_slam/launch/turtlebot3_cartographer.launch
++++ b/turtlebot3_slam/launch/turtlebot3_cartographer.launch
+@@ -27,7 +27,8 @@
+   <!-- cartographer_node -->
+   <node pkg="cartographer_ros" type="cartographer_node" name="cartographer_node" 
+         args="-configuration_directory $(find turtlebot3_slam)/config
+-              -configuration_basename $(arg configuration_basename)"
++              -configuration_basename $(arg configuration_basename)
++              -save-state-filename land_explorer.pbstream"
+         output="screen">
+     <remap from="/imu" to="/flat_imu"/>
+     <!--remap from="points2" to="/camera/depth/points" / -->
